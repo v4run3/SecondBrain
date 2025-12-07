@@ -11,6 +11,14 @@ const Register = ({ setUser }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Password validation logic
+    const passwordRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{8,}$/;
+    if (!passwordRegex.test(password)) {
+      setError('Password must be at least 8 characters long and contain at least one uppercase letter, one number, and one special character.');
+      return;
+    }
+
     try {
       const res = await api.post('/auth/register', { name, email, username, password });
       localStorage.setItem('token', res.data.token);
