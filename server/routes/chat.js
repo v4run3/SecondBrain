@@ -33,7 +33,11 @@ router.post('/', protect, async (req, res) => {
   }
 
   try {
-    const workerUrl = process.env.NLP_SERVICE_URL;
+    // Handle both full URL (local) and hostname (Render)
+    let workerUrl = process.env.NLP_SERVICE_URL;
+    if (workerUrl && !workerUrl.startsWith('http')) {
+      workerUrl = `https://${workerUrl}`;
+    }
 
     // 1. Search for relevant chunks
     const searchRes = await axios.post(`${workerUrl}/search`, { 

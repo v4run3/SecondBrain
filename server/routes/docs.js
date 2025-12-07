@@ -80,7 +80,11 @@ router.post('/upload', protect, upload.single('file'), async (req, res) => {
         // Let's assume the worker can access the file via a shared path.
         // For now, we'll send the path relative to the project root if running locally.
         
-        const workerUrl = process.env.NLP_SERVICE_URL;
+        // Handle both full URL (local) and hostname (Render)
+        let workerUrl = process.env.NLP_SERVICE_URL;
+        if (workerUrl && !workerUrl.startsWith('http')) {
+          workerUrl = `https://${workerUrl}`;
+        }
         
         // Note: This path logic is tricky between host/container. 
         // In Docker, we mounted ./uploads to /app/uploads in both containers.

@@ -15,7 +15,7 @@ services:
         fromService:
           type: web
           name: secondbrain-worker
-          property: url
+          property: host
       - key: EMAIL_USER
         sync: false
       - key: EMAIL_PASS
