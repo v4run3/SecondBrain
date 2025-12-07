@@ -1,0 +1,54 @@
+
+
+services:
+  mongo:
+    image: mongo:6.0
+    container_name: secondbrain-mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    networks:
+      - secondbrain-network
+
+  server:
+    build: ./server
+    container_name: secondbrain-server
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - MONGO_URI=mongodb://mongo:27017/secondbrain
+      - JWT_SECRET=dev_secret_key_123
+      - NLP_SERVICE_URL=http://worker:8000
+    depends_on:
+      - mongo
+      - worker
+    volumes:
+      - ./server:/app
+      - /app/node_modules
+      - ./uploads:/app/uploads
+    networks:
+      - secondbrain-network
+    command: npm run dev
+
+  worker:
+    build: ./worker
+    container_name: secondbrain-worker
+    ports:
+      - "8000:8000"
+    environment:
+      - PORT=8000
+    volumes:
+      - ./worker:/app
+      - ./uploads:/app/uploads
+    networks:
+      - secondbrain-network
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+networks:
+  secondbrain-network:
+    driver: bridge
+
+volumes:
+  mongo-data:
