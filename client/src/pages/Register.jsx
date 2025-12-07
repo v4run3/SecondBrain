@@ -1,19 +1,20 @@
 import { useState } from 'react';
 import api from '../api';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
-const Register = ({ setUser }) => {
+const Register = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     
     // Password validation logic
-    const passwordRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{8,}$/;
+    const passwordRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]).{8,}$/;
     if (!passwordRegex.test(password)) {
       setError('Password must be at least 8 characters long and contain at least one uppercase letter, one number, and one special character.');
       return;
@@ -21,8 +22,9 @@ const Register = ({ setUser }) => {
 
     try {
       const res = await api.post('/auth/register', { name, email, username, password });
-      localStorage.setItem('token', res.data.token);
-      setUser({ token: res.data.token, ...res.data });
+      // Don't set token yet. Redirect to verify.
+      // res.data will contain { message, email }
+      navigate('/verify-email', { state: { email: res.data.email } });
     } catch (err) {
       setError(err.response?.data?.message || 'Registration failed');
     }

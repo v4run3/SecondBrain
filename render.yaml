@@ -1,0 +1,37 @@
+services:
+  # 1. Node.js Backend Server
+  - type: web
+    name: secondbrain-server
+    runtime: node
+    rootDir: server
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: MONGO_URI
+        sync: false
+      - key: JWT_SECRET
+        sync: false # Set this in Render Dashboard
+      - key: NLP_SERVICE_URL
+        fromService:
+          type: web
+          name: secondbrain-worker
+          property: url
+      - key: EMAIL_USER
+        sync: false
+      - key: EMAIL_PASS
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+
+  # 2. Python Worker (NLP Microservice)
+  # We use 'docker' env to preserve the exact dependencies (Tesseract)
+  - type: web
+    name: secondbrain-worker
+    runtime: docker
+    rootDir: worker
+    # Docker context will be rootDir 'worker'
+    envVars:
+      - key: PORT
+        value: 10000 
+        # Render internal port, but Dockerfile exposes 8000. 
+        # Render maps internal ports automatically if EXPOSE is present.

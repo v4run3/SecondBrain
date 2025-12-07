@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { User, Camera, Key, Save, Loader2, ArrowLeft } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import api from '../api';
 
 const Profile = () => {
@@ -14,7 +14,7 @@ const Profile = () => {
     const [message, setMessage] = useState('');
     const [error, setError] = useState('');
     const fileInputRef = useRef(null);
-    const navigate = useNavigate();
+
 
     useEffect(() => {
         fetchProfile();
