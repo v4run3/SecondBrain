@@ -139,7 +139,6 @@ const Dashboard = () => {
       console.error(err);
       const errorMsg = err.response?.data?.message || 'Error getting answer. Please check your API key.';
       setChatHistory(prev => [...prev, { role: 'assistant', text: errorMsg }]);
-      setChatHistory(prev => [...prev, { role: 'assistant', text: errorMsg }]);
     } finally {
       setLoadingChat(false);
     }
