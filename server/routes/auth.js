@@ -2,6 +2,11 @@ const express = require('express');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const sendEmail = require('../utils/sendEmail');
+const { 
+  registerValidation, 
+  verifyEmailValidation, 
+  handleValidationErrors 
+} = require('../middleware/validationMiddleware');
 const router = express.Router();
 
 const generateToken = (id) => {
@@ -13,7 +18,7 @@ const generateToken = (id) => {
 // @route   POST /api/auth/register
 // @desc    Register a new user
 // @access  Public
-router.post('/register', async (req, res) => {
+router.post('/register', registerValidation, handleValidationErrors, async (req, res) => {
   const { name, email, password, username } = req.body;
 
   try {
@@ -72,7 +77,7 @@ router.post('/register', async (req, res) => {
 // @route   POST /api/auth/verify-email
 // @desc    Verify OTP
 // @access  Public
-router.post('/verify-email', async (req, res) => {
+router.post('/verify-email', verifyEmailValidation, handleValidationErrors, async (req, res) => {
   const { email, otp } = req.body;
   try {
     const user = await User.findOne({ email });
