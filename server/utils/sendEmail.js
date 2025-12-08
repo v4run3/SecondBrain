@@ -5,7 +5,7 @@ const sendEmail = async (options) => {
 
   const msg = {
     to: options.email,
-    from: 'noreply@secondbrain.app', // Use a verified sender or SendGrid's test email
+    from: 'varuncodez@gmail.com', // Use a verified sender or SendGrid's test email
     subject: options.subject,
     html: options.html || `<p>${options.message}</p>`,
   };
