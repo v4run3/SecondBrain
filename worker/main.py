@@ -1,7 +1,8 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form
 from pydantic import BaseModel
 from typing import List, Optional
 import os
+import tempfile
 from nlp_utils import extract_text, chunk_text, get_embedding, embedding_model
 import numpy as np
 import faiss
@@ -33,51 +34,44 @@ def health_check():
     return HealthCheck()
 
 @app.post("/extract")
-async def extract_document(req: ExtractRequest):
+async def extract_document(
+    file: UploadFile = File(...),
+    docId: str = Form(...),
+    sourceType: str = Form(...)
+):
+    """
+    Extract text from uploaded file, chunk it, and generate embeddings.
+    Accepts file upload via multipart/form-data instead of file path.
+    """
     try:
-        # 1. Extract text
-        # Note: In docker, the path might need adjustment if volumes aren't perfect.
-        # Assuming filePath is accessible.
-        text = extract_text(req.filePath, req.sourceType)
+        # Save uploaded file to temporary location
+        with tempfile.NamedTemporaryFile(delete=False, suffix=f".{sourceType}") as tmp_file:
+            content = await file.read()
+            tmp_file.write(content)
+            tmp_file_path = tmp_file.name
         
-        # 2. Chunk
-        chunks = chunk_text(text)
-        
-        # 3. Embed and Index
-        # We need to return chunks to Node so it can store them in Mongo.
-        # We also need to index them in FAISS.
-        # Problem: We need unique IDs for FAISS. 
-        # Strategy: Node saves chunks first? Or we generate IDs here?
-        # Let's return the chunks and embeddings to Node. Node assigns IDs, saves to Mongo.
-        # Then Node calls another endpoint to "index" them? 
-        # Or simpler: We return the text chunks and their embeddings. 
-        # Node saves to Mongo.
-        # For the local FAISS, if we want to search HERE, we need the data HERE.
-        
-        # Revised Flow for MVP:
-        # 1. Extract & Chunk & Embed here.
-        # 2. Store in local FAISS (in memory for now).
-        # 3. Return chunks + metadata to Node to store in Mongo.
-        # 4. We need a way to map FAISS ID back to Mongo ID. 
-        #    Since we don't have Mongo ID yet, we can't map it easily unless Node creates IDs first.
-        
-        # Alternative: Node sends the file. We process. We return list of { text, embedding }.
-        # Node saves to Mongo.
-        # Node sends back { mongoId, embedding } to be added to FAISS?
-        # That's too chatty.
-        
-        # Let's just return text chunks. Node saves them.
-        # Then Node calls /index_batch with { id, text } or { id, embedding }.
-        
-        response_chunks = []
-        for chunk_text_content in chunks:
-            embedding = get_embedding(chunk_text_content)
-            response_chunks.append({
-                "text": chunk_text_content,
-                "embedding": embedding.tolist()
-            })
+        try:
+            # 1. Extract text from temporary file
+            text = extract_text(tmp_file_path, sourceType)
             
-        return {"chunks": response_chunks}
+            # 2. Chunk the text
+            chunks = chunk_text(text)
+            
+            # 3. Generate embeddings for each chunk
+            response_chunks = []
+            for chunk_text_content in chunks:
+                embedding = get_embedding(chunk_text_content)
+                response_chunks.append({
+                    "text": chunk_text_content,
+                    "embedding": embedding.tolist()
+                })
+                
+            return {"chunks": response_chunks}
+            
+        finally:
+            # Clean up temporary file
+            if os.path.exists(tmp_file_path):
+                os.unlink(tmp_file_path)
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

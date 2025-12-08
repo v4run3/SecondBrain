@@ -62,42 +62,27 @@ router.post('/upload', protect, upload.single('file'), async (req, res) => {
     try {
         console.log(`Triggering processing for ${doc._id}`);
         
-        // 1. Extract and Embed
-        // We need to pass the absolute path. 
-        // In docker-compose, server and worker share volumes? 
-        // We need to make sure the worker can access the file.
-        // For local dev without docker (if running separately), paths match.
-        // For docker, we need shared volume.
-        // Assuming shared volume mounted at /app/uploads for both?
-        // In docker-compose:
-        // server: ./server:/app
-        // worker: ./worker:/app
-        // They are different directories.
-        // We need a shared volume for uploads.
-        // Let's fix docker-compose later. For now, assume we can access it.
-        // Or send the file content? No, too big.
-        
-        // Let's assume the worker can access the file via a shared path.
-        // For now, we'll send the path relative to the project root if running locally.
-        
-        // Handle both full URL (local) and hostname (Render)
+        // Handle both full URL (local) and hostname (Railway)
         let workerUrl = process.env.NLP_SERVICE_URL;
         if (workerUrl && !workerUrl.startsWith('http')) {
           workerUrl = `https://${workerUrl}`;
         }
         
-        // Note: This path logic is tricky between host/container. 
-        // In Docker, we mounted ./uploads to /app/uploads in both containers.
-        // The file.path from multer (in server) will be something like 'uploads/filename'.
-        // We need to resolve this to the absolute path inside the container.
-        // Since both mount ./uploads to /app/uploads, the path /app/uploads/filename is valid for both.
+        // Send file content to worker via multipart/form-data
+        // This works on Railway where services don't share filesystem
+        const FormData = require('form-data');
+        const formData = new FormData();
         
-        const absoluteFilePath = path.resolve(req.file.path);
+        // Read the file and append to form data
+        const fileStream = fs.createReadStream(req.file.path);
+        formData.append('file', fileStream, req.file.originalname);
+        formData.append('docId', doc._id.toString());
+        formData.append('sourceType', doc.sourceType);
 
-        const extractRes = await axios.post(`${workerUrl}/extract`, {
-          docId: doc._id,
-          filePath: absoluteFilePath,
-          sourceType: doc.sourceType
+        const extractRes = await axios.post(`${workerUrl}/extract`, formData, {
+          headers: formData.getHeaders(),
+          maxContentLength: Infinity,
+          maxBodyLength: Infinity
         });
         
         const { chunks } = extractRes.data;
@@ -106,7 +91,7 @@ router.post('/upload', protect, upload.single('file'), async (req, res) => {
         const chunkDocs = chunks.map((c, index) => ({
             docId: doc._id,
             text: c.text,
-            embedding: c.embedding, // Optional to store in Mongo
+            embedding: c.embedding,
             page: 1, // TODO: Get page from extractor
             chunkIndex: index
         }));
