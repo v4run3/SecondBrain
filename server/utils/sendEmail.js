@@ -1,33 +1,20 @@
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 
 const sendEmail = async (options) => {
-  // Create transporter with explicit SMTP settings
-  const transporter = nodemailer.createTransport({
-    host: 'smtp.gmail.com',
-    port: 587,
-    secure: false, // Use STARTTLS
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
-    },
-    tls: {
-      rejectUnauthorized: false
-    },
-    connectionTimeout: 10000, // 10 seconds
-    greetingTimeout: 10000
-  });
+  const resend = new Resend(process.env.RESEND_API_KEY);
 
-  // Define email options
-  const mailOptions = {
-    from: `"SecondBrain" <${process.env.EMAIL_USER}>`,
-    to: options.email,
-    subject: options.subject,
-    text: options.message,
-    html: options.html
-  };
-
-  // Send email
-  await transporter.sendMail(mailOptions);
+  try {
+    await resend.emails.send({
+      from: 'SecondBrain <onboarding@resend.dev>', // Use Resend's test domain or your verified domain
+      to: options.email,
+      subject: options.subject,
+      html: options.html || `<p>${options.message}</p>`,
+    });
+    console.log(`Email sent successfully to ${options.email}`);
+  } catch (error) {
+    console.error('Email send failed:', error);
+    throw error;
+  }
 };
 
 module.exports = sendEmail;
