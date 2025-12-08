@@ -38,38 +38,54 @@ async def extract_document(
     Extract text from uploaded file, chunk it, and generate embeddings.
     Accepts file upload via multipart/form-data instead of file path.
     """
+    print(f"[EXTRACT] Starting extraction for docId: {docId}, type: {sourceType}")
+    
     try:
         # Save uploaded file to temporary location
+        print(f"[EXTRACT] Saving uploaded file...")
         with tempfile.NamedTemporaryFile(delete=False, suffix=f".{sourceType}") as tmp_file:
             content = await file.read()
             tmp_file.write(content)
             tmp_file_path = tmp_file.name
         
+        print(f"[EXTRACT] File saved to: {tmp_file_path}")
+        
         try:
             # 1. Extract text from temporary file
+            print(f"[EXTRACT] Extracting text...")
             text = extract_text(tmp_file_path, sourceType)
+            print(f"[EXTRACT] Extracted {len(text)} characters")
             
             # 2. Chunk the text
+            print(f"[EXTRACT] Chunking text...")
             chunks = chunk_text(text)
+            print(f"[EXTRACT] Created {len(chunks)} chunks")
             
             # 3. Generate embeddings for each chunk
+            print(f"[EXTRACT] Generating embeddings...")
             response_chunks = []
-            for chunk_text_content in chunks:
+            for i, chunk_text_content in enumerate(chunks):
+                print(f"[EXTRACT] Processing chunk {i+1}/{len(chunks)}")
                 embedding = get_embedding(chunk_text_content)
                 response_chunks.append({
                     "text": chunk_text_content,
                     "embedding": embedding.tolist()
                 })
-                
+            
+            print(f"[EXTRACT] Successfully processed {len(response_chunks)} chunks")
             return {"chunks": response_chunks}
             
         finally:
             # Clean up temporary file
             if os.path.exists(tmp_file_path):
                 os.unlink(tmp_file_path)
+                print(f"[EXTRACT] Cleaned up temp file")
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        print(f"[EXTRACT ERROR] {type(e).__name__}: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"{type(e).__name__}: {str(e)}")
 
 @app.post("/embed")
 async def embed_text(text: str):
