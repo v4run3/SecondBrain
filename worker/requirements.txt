@@ -3,9 +3,11 @@ uvicorn
 python-multipart
 requests
 pymongo
-sentence-transformers
-faiss-cpu
+# Minimal ML dependencies to reduce image size
+sentence-transformers==2.2.2
+faiss-cpu==1.7.4
 pdfplumber
 pytesseract
 Pillow
 python-dotenv
+numpy
